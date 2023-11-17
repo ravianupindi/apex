@@ -31,12 +31,13 @@ if not torch.cuda.is_available():
           'and, if the CUDA version is >= 11.0, Ampere (compute capability 8.0).\n'
           'If you wish to cross-compile for a single specific architecture,\n'
           'export TORCH_CUDA_ARCH_LIST="compute capability" before running setup.py.\n')
-    if os.environ.get("TORCH_CUDA_ARCH_LIST", None) is None:
-        _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.ROCM_HOME)
-        if int(bare_metal_major) == 11:
-            os.environ["TORCH_CUDA_ARCH_LIST"] = "6.0;6.1;6.2;7.0;7.5;8.0"
-        else:
-            os.environ["TORCH_CUDA_ARCH_LIST"] = "6.0;6.1;6.2;7.0;7.5"
+    # if os.environ.get("TORCH_CUDA_ARCH_LIST", None) is None:
+    #     _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.ROCM_HOME)
+    #     if int(bare_metal_major) == 11:
+    #         os.environ["TORCH_CUDA_ARCH_LIST"] = "6.0;6.1;6.2;7.0;7.5;8.0"
+    #     else:
+    #         os.environ["TORCH_CUDA_ARCH_LIST"] = "6.0;6.1;6.2;7.0;7.5"
+    os.environ["TORCH_CUDA_ARCH_LIST"] = "6.0;6.1;6.2;7.0;7.5;8.0"
 
 print("\n\ntorch.__version__  = {}\n\n".format(torch.__version__))
 TORCH_MAJOR = int(torch.__version__.split('.')[0])
