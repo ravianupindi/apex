@@ -11,7 +11,7 @@ import os
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
 def get_cuda_bare_metal_version(cuda_dir):
-    raw_output = subprocess.check_output([cuda_dir + "/bin/nvcc", "-V"], universal_newlines=True)
+    raw_output = subprocess.check_output([cuda_dir + "/hip/bin/hipcc", "-V"], universal_newlines=True)
     output = raw_output.split()
     release_idx = output.index("release") + 1
     release = output[release_idx].split(".")
@@ -32,7 +32,7 @@ if not torch.cuda.is_available():
           'If you wish to cross-compile for a single specific architecture,\n'
           'export TORCH_CUDA_ARCH_LIST="compute capability" before running setup.py.\n')
     if os.environ.get("TORCH_CUDA_ARCH_LIST", None) is None:
-        _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.CUDA_HOME)
+        _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.ROCM_HOME)
         if int(bare_metal_major) == 11:
             os.environ["TORCH_CUDA_ARCH_LIST"] = "6.0;6.1;6.2;7.0;7.5;8.0"
         else:
@@ -81,7 +81,7 @@ if "--cpp_ext" in sys.argv:
                      ['csrc/flatten_unflatten.cpp',]))
 
 def get_cuda_bare_metal_version(cuda_dir):
-    raw_output = subprocess.check_output([cuda_dir + "/bin/nvcc", "-V"], universal_newlines=True)
+    raw_output = subprocess.check_output([cuda_dir + "/bin/hipcc", "-V"], universal_newlines=True)
     output = raw_output.split()
     release_idx = output.index("release") + 1
     release = output[release_idx].split(".")
@@ -130,8 +130,8 @@ if "--distributed_adam" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--distributed_adam was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--distributed_adam was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         ext_modules.append(
             CUDAExtension(name='distributed_adam_cuda',
@@ -139,7 +139,7 @@ if "--distributed_adam" in sys.argv:
                                    'apex/contrib/csrc/optimizers/multi_tensor_distopt_adam_kernel.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '--use_fast_math'] + version_dependent_macros}))
 
 if "--distributed_lamb" in sys.argv:
@@ -149,8 +149,8 @@ if "--distributed_lamb" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--distributed_lamb was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--distributed_lamb was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         ext_modules.append(
             CUDAExtension(name='distributed_lamb_cuda',
@@ -158,17 +158,17 @@ if "--distributed_lamb" in sys.argv:
                                    'apex/contrib/csrc/optimizers/multi_tensor_distopt_lamb_kernel.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '--use_fast_math'] + version_dependent_macros}))
 
 if "--cuda_ext" in sys.argv:
     from torch.utils.cpp_extension import CUDAExtension
     sys.argv.remove("--cuda_ext")
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--cuda_ext was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--cuda_ext was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
-        check_cuda_torch_binary_vs_bare_metal(torch.utils.cpp_extension.CUDA_HOME)
+        check_cuda_torch_binary_vs_bare_metal(torch.utils.cpp_extension.ROCM_HOME)
 
         ext_modules.append(
             CUDAExtension(name='amp_C',
@@ -184,7 +184,7 @@ if "--cuda_ext" in sys.argv:
                                    'csrc/multi_tensor_novograd.cu',
                                    'csrc/multi_tensor_lamb.cu'],
                           extra_compile_args={'cxx': ['-O3'] + version_dependent_macros,
-                                              'nvcc':['-lineinfo',
+                                              'hipcc':['-lineinfo',
                                                       '-O3',
                                                       # '--resource-usage',
                                                       '--use_fast_math'] + version_dependent_macros}))
@@ -193,14 +193,14 @@ if "--cuda_ext" in sys.argv:
                           sources=['csrc/syncbn.cpp',
                                    'csrc/welford.cu'],
                           extra_compile_args={'cxx': ['-O3'] + version_dependent_macros,
-                                              'nvcc':['-O3'] + version_dependent_macros}))
+                                              'hipcc':['-O3'] + version_dependent_macros}))
 
         ext_modules.append(
             CUDAExtension(name='fused_layer_norm_cuda',
                           sources=['csrc/layer_norm_cuda.cpp',
                                    'csrc/layer_norm_cuda_kernel.cu'],
                           extra_compile_args={'cxx': ['-O3'] + version_dependent_macros,
-                                              'nvcc':['-maxrregcount=50',
+                                              'hipcc':['-maxrregcount=50',
                                                       '-O3',
                                                       '--use_fast_math'] + version_dependent_macros}))
 
@@ -209,7 +209,7 @@ if "--cuda_ext" in sys.argv:
                           sources=['csrc/mlp.cpp',
                                    'csrc/mlp_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3'] + version_dependent_macros,
-                                              'nvcc':['-O3'] + version_dependent_macros}))
+                                              'hipcc':['-O3'] + version_dependent_macros}))
 
 if "--bnp" in sys.argv:
     from torch.utils.cpp_extension import CUDAExtension
@@ -218,8 +218,8 @@ if "--bnp" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--bnp was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--bnp was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         ext_modules.append(
             CUDAExtension(name='bnp',
@@ -229,7 +229,7 @@ if "--bnp" in sys.argv:
                                    'apex/contrib/csrc/groupbn/batch_norm_add_relu.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': [] + version_dependent_macros,
-                                              'nvcc':['-DCUDA_HAS_FP16=1',
+                                              'hipcc':['-DCUDA_HAS_FP16=1',
                                                       '-D__CUDA_NO_HALF_OPERATORS__',
                                                       '-D__CUDA_NO_HALF_CONVERSIONS__',
                                                       '-D__CUDA_NO_HALF2_OPERATORS__'] + version_dependent_macros}))
@@ -241,8 +241,8 @@ if "--xentropy" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--xentropy was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--xentropy was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         ext_modules.append(
             CUDAExtension(name='xentropy_cuda',
@@ -250,7 +250,7 @@ if "--xentropy" in sys.argv:
                                    'apex/contrib/csrc/xentropy/xentropy_kernel.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': ['-O3'] + version_dependent_macros,
-                                              'nvcc':['-O3'] + version_dependent_macros}))
+                                              'hipcc':['-O3'] + version_dependent_macros}))
 
 if "--deprecated_fused_adam" in sys.argv:
     from torch.utils.cpp_extension import CUDAExtension
@@ -259,8 +259,8 @@ if "--deprecated_fused_adam" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--deprecated_fused_adam was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--deprecated_fused_adam was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         ext_modules.append(
             CUDAExtension(name='fused_adam_cuda',
@@ -268,7 +268,7 @@ if "--deprecated_fused_adam" in sys.argv:
                                    'apex/contrib/csrc/optimizers/fused_adam_cuda_kernel.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '--use_fast_math'] + version_dependent_macros}))
 
 if "--deprecated_fused_lamb" in sys.argv:
@@ -278,8 +278,8 @@ if "--deprecated_fused_lamb" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--deprecated_fused_lamb was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--deprecated_fused_lamb was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         ext_modules.append(
             CUDAExtension(name='fused_lamb_cuda',
@@ -288,10 +288,10 @@ if "--deprecated_fused_lamb" in sys.argv:
                                    'csrc/multi_tensor_l2norm_kernel.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '--use_fast_math'] + version_dependent_macros}))
 
-# Check, if ATen/CUDAGenerator.h is found, otherwise use the new ATen/CUDAGeneratorImpl.h, due to breaking change in https://github.com/pytorch/pytorch/pull/36026 
+# Check, if ATen/CUDAGenerator.h is found, otherwise use the new ATen/CUDAGeneratorImpl.h, due to breaking change in https://github.com/pytorch/pytorch/pull/36026
 generator_flag = []
 torch_dir = torch.__path__[0]
 if os.path.exists(os.path.join(torch_dir, 'include', 'ATen', 'CUDAGenerator.h')):
@@ -304,12 +304,12 @@ if "--fast_layer_norm" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension.with_options(use_ninja=False)
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--fast_layer_norm was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--fast_layer_norm was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         # Check, if CUDA11 is installed for compute capability 8.0
         cc_flag = []
-        _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.CUDA_HOME)
+        _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.ROCM_HOME)
         if int(bare_metal_major) >= 11:
             cc_flag.append('-gencode')
             cc_flag.append('arch=compute_80,code=sm_80')
@@ -321,7 +321,7 @@ if "--fast_layer_norm" in sys.argv:
                                    'apex/contrib/csrc/layer_norm/ln_bwd_semi_cuda_kernel.cu',
                                    ],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
                                                       '-U__CUDA_NO_HALF_CONVERSIONS__',
@@ -337,12 +337,12 @@ if "--fast_multihead_attn" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension.with_options(use_ninja=False)
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--fast_multihead_attn was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--fast_multihead_attn was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         # Check, if CUDA11 is installed for compute capability 8.0
         cc_flag = []
-        _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.CUDA_HOME)
+        _, bare_metal_major, _ = get_cuda_bare_metal_version(cpp_extension.ROCM_HOME)
         if int(bare_metal_major) >= 11:
             cc_flag.append('-gencode')
             cc_flag.append('arch=compute_80,code=sm_80')
@@ -353,7 +353,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/additive_masked_softmax_dropout.cpp',
                                    'apex/contrib/csrc/multihead_attn/additive_masked_softmax_dropout_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -366,7 +366,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/masked_softmax_dropout.cpp',
                                    'apex/contrib/csrc/multihead_attn/masked_softmax_dropout_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -379,7 +379,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/self_multihead_attn_bias_additive_mask.cpp',
                                    'apex/contrib/csrc/multihead_attn/self_multihead_attn_bias_additive_mask_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -392,7 +392,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/self_multihead_attn_bias.cpp',
                                    'apex/contrib/csrc/multihead_attn/self_multihead_attn_bias_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -405,7 +405,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/self_multihead_attn.cpp',
                                    'apex/contrib/csrc/multihead_attn/self_multihead_attn_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -418,7 +418,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/self_multihead_attn_norm_add.cpp',
                                    'apex/contrib/csrc/multihead_attn/self_multihead_attn_norm_add_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -431,7 +431,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/encdec_multihead_attn.cpp',
                                    'apex/contrib/csrc/multihead_attn/encdec_multihead_attn_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -444,7 +444,7 @@ if "--fast_multihead_attn" in sys.argv:
                           sources=['apex/contrib/csrc/multihead_attn/encdec_multihead_attn_norm_add.cpp',
                                    'apex/contrib/csrc/multihead_attn/encdec_multihead_attn_norm_add_cuda.cu'],
                           extra_compile_args={'cxx': ['-O3',] + version_dependent_macros + generator_flag,
-                                              'nvcc':['-O3',
+                                              'hipcc':['-O3',
                                                       '-gencode', 'arch=compute_70,code=sm_70',
                                                       '-I./apex/contrib/csrc/multihead_attn/cutlass/',
                                                       '-U__CUDA_NO_HALF_OPERATORS__',
@@ -460,8 +460,8 @@ if "--transducer" in sys.argv:
     from torch.utils.cpp_extension import BuildExtension
     cmdclass['build_ext'] = BuildExtension.with_options(use_ninja=False)
 
-    if torch.utils.cpp_extension.CUDA_HOME is None:
-        raise RuntimeError("--transducer was requested, but nvcc was not found.  Are you sure your environment has nvcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide nvcc.")
+    if torch.utils.cpp_extension.ROCM_HOME is None:
+        raise RuntimeError("--transducer was requested, but hipcc was not found.  Are you sure your environment has hipcc available?  If you're installing within a container from https://hub.docker.com/r/pytorch/pytorch, only images whose names contain 'devel' will provide hipcc.")
     else:
         ext_modules.append(
             CUDAExtension(name='transducer_joint_cuda',
@@ -469,14 +469,14 @@ if "--transducer" in sys.argv:
                                    'apex/contrib/csrc/transducer/transducer_joint_kernel.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': ['-O3'] + version_dependent_macros,
-                                              'nvcc':['-O3'] + version_dependent_macros}))
+                                              'hipcc':['-O3'] + version_dependent_macros}))
         ext_modules.append(
             CUDAExtension(name='transducer_loss_cuda',
                           sources=['apex/contrib/csrc/transducer/transducer_loss.cpp',
                                    'apex/contrib/csrc/transducer/transducer_loss_kernel.cu'],
                           include_dirs=[os.path.join(this_dir, 'csrc')],
                           extra_compile_args={'cxx': ['-O3'] + version_dependent_macros,
-                                              'nvcc':['-O3'] + version_dependent_macros}))
+                                              'hipcc':['-O3'] + version_dependent_macros}))
 
 setup(
     name='apex',
